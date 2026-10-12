@@ -1114,25 +1114,53 @@
         let i = id ? item(id) : null;
         modal(
           i ? "Edit Barang" : "Tambah Master Barang",
-          `<form id="itemForm"><div class="formgrid"><div class="field"><label>Kode SKU</label><input name="code" required value="${esc(i?.code || "")}" placeholder="AM-600"></div><div class="field"><label>Nama Barang</label><input name="name" required value="${esc(i?.name || "")}" placeholder="Air Mineral 600 ml"></div><div class="field"><label>Ukuran</label><input name="size" required value="${esc(i?.size || "")}" placeholder="600 ml"></div><div class="field"><label>Isi kardus (pcs)</label><input name="perBox" type="number" min="1" required value="${i?.perBox || 24}"></div><div class="field"><label>Minimum kardus</label><input name="minBox" type="number" min="0" required value="${i?.minBox || 0}"></div></div><p class="muted">Mengubah isi kardus tidak otomatis mengonversi stok lama.</p><button>Simpan Barang</button></form>`,
+          `<form id="itemForm">
+            <div class="formgrid">
+              <div class="field"><label>Kode SKU</label><input name="code" required value="${esc(i?.code || "")}" placeholder="AM-600"></div>
+              <div class="field"><label>Nama Barang</label><input name="name" required value="${esc(i?.name || "")}" placeholder="Air Mineral 600 ml"></div>
+              <div class="field"><label>Ukuran</label><input name="size" required value="${esc(i?.size || "")}" placeholder="600 ml"></div>
+              <div class="field"><label>Isi kardus (pcs)</label><input name="perBox" type="number" min="1" required value="${i?.perBox || 24}"></div>
+              <div class="field"><label>Minimum kardus</label><input name="minBox" type="number" min="0" required value="${i?.minBox || 0}"></div>
+            </div>
+            <p class="muted">Mengubah isi kardus tidak otomatis mengonversi stok lama.</p>
+            <button type="submit">Simpan Barang</button>
+          </form>`,
         );
-        fetch(API_URL + "/items", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(v), // v adalah variabel yang berisi data form
-        })
-          .then((res) => res.json())
-          .then((data) => {
-            if (data.success) {
-              toast("Master barang tersimpan di Cloudflare!");
-              loadData(); // Ambil ulang data terbaru dari database
-              closeModal();
-            }
+
+        // Event listener saat tombol simpan di dalam modal diklik
+        $("itemForm").onsubmit = (e) => {
+          e.preventDefault();
+          let formData = new FormData(e.target);
+          let v = {
+            code: formData.get("code"),
+            name: formData.get("name"),
+            size: formData.get("size"),
+            perBox: Number(formData.get("perBox")),
+            minBox: Number(formData.get("minBox")),
+            pcs: 0,
+            boxes: 0,
+          };
+
+          fetch(API_URL + "/items", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(v),
           })
-          .catch((err) => toast("Gagal menyimpan ke server"));
-        closeModal();
-        save();
-        toast("Master barang tersimpan");
+            .then((res) => res.json())
+            .then((data) => {
+              if (data.success) {
+                toast("Master barang tersimpan di Cloudflare!");
+                loadData(); // Ambil ulang data terbaru dari database
+                closeModal();
+              } else {
+                toast("Gagal menyimpan ke server");
+              }
+            })
+            .catch((err) => {
+              console.error(err);
+              toast("Terjadi kesalahan koneksi ke server");
+            });
+        };
       }
 
       function delItem(id) {
