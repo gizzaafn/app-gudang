@@ -1,0 +1,8 @@
+name = "aquafresh-api"
+main = "index.js"
+compatibility_date = "2024-01-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "aquafresh-db"
+database_id = "3dc265b0-83ba-4571-8d1e-63ddca000519"
