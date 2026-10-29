@@ -70,6 +70,43 @@ const KEY = "aquafresh_gudang_v1",
 
       const API_URL = "https://aquafresh-api.gizzanadifa.workers.dev";
 
+        // --- 1. Definisi Kelas LCG (dari Modul 5) ---
+class LCG {
+    constructor(seed, a = 1664525, c = 1013904223, m = 2 ** 32) {
+        this.state = seed;
+        this.a = a;
+        this.c = c;
+        this.m = m;
+    }
+
+    next() {
+        this.state = (this.a * this.state + this.c) % this.m;
+        return this.state / this.m;
+    }
+
+    reset(seed) {
+        this.state = seed;
+    }
+}
+
+// --- 2. Contoh Penggunaan di Fitur Gudang ---
+// Misalnya untuk mensimulasikan jumlah stok masuk secara acak antara 10 sampai 100 unit
+function simulasiStokMasuk(seedAwal) {
+    const rng = new LCG(seedAwal);
+    const randomFaktor = rng.next(); // Menghasilkan angka acak 0.0 sampai 1.0
+    
+    // Rentang nilai: 10 s.d. 100
+    const min = 10;
+    const max = 100;
+    const estimasiStok = Math.floor(min + randomFaktor * (max - min + 1));
+    
+    return estimasiStok;
+}
+
+// Contoh pemanggilan fungsi
+const seedBarang = 12345;
+console.log("Simulasi jumlah stok masuk:", simulasiStokMasuk(seedBarang));
+
       // Inisialisasi Database: Pulihkan dari localStorage agar data tidak hilang saat refresh
       function initDB() {
         try {
