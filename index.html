@@ -97,20 +97,6 @@
                 <div class="num" id="ships">0</div>
               </div>
             </div>
-
-            <div class="panel" style="margin-top: 18px;">
-              <h3>🎲 Simulasi Nomor Batch LCG</h3>
-              <div class="note">
-                Batch dibuat otomatis menggunakan Linear Congruential Generator (LCG) untuk ujicoba cepat di antarmuka aplikasi.
-              </div>
-              <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top: 12px;">
-                <button type="button" id="btnSimulasiBatch" class="btn green">Generate Batch Otomatis</button>
-                <div style="font-size: 14px; color: var(--muted);">
-                  Nomor Batch: <b><span id="textBatch">-</span></b>
-                </div>
-              </div>
-            </div>
-
             <div class="cols">
               <div class="panel">
                 <h3>⚠️ Barang Stok Menipis</h3>
@@ -265,10 +251,7 @@
                   </div>
                   <div class="field">
                     <label> Nomor batch / lot </label>
-                    <div style="display:flex; gap:8px; align-items:center;">
-                      <input id="prodBatch" placeholder="LOT-001" style="flex:1;" />
-                      <button type="button" class="btn small gray" data-batch-target="prodBatch" data-batch-prefix="LOT">Generate</button>
-                    </div>
+                    <input id="prodBatch" placeholder="LOT-001" />
                   </div>
                   <div class="field full">
                     <label> Catatan </label>
@@ -314,10 +297,7 @@
                   </div>
                   <div class="field">
                     <label> Nomor batch packing </label>
-                    <div style="display:flex; gap:8px; align-items:center;">
-                      <input id="packBatch" placeholder="PK-001" style="flex:1;" />
-                      <button type="button" class="btn small gray" data-batch-target="packBatch" data-batch-prefix="PK">Generate</button>
-                    </div>
+                    <input id="packBatch" placeholder="PK-001" />
                   </div>
                   <div class="field full note" id="packPreview">
                     Pilih barang untuk melihat kebutuhan pcs.

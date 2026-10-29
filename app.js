@@ -93,8 +93,9 @@ const KEY = "aquafresh_gudang_v1",
       // Misalnya untuk mensimulasikan jumlah stok masuk secara acak antara 10 sampai 100 unit
       function simulasiStokMasuk(seedAwal) {
         const rng = new LCG(seedAwal);
-        const randomFaktor = rng.next();
+        const randomFaktor = rng.next(); // Menghasilkan angka acak 0.0 sampai 1.0
 
+        // Rentang nilai: 10 s.d. 100
         const min = 10;
         const max = 100;
         const estimasiStok = Math.floor(min + randomFaktor * (max - min + 1));
@@ -102,45 +103,11 @@ const KEY = "aquafresh_gudang_v1",
         return estimasiStok;
       }
 
-      function generateBatchCode(prefix = "BATCH", digits = 6) {
-        const seedValue = Math.abs(Math.floor(Date.now() + Math.random() * 1_000_000));
-        const rng = new LCG(seedValue);
-        const min = 10 ** (digits - 1);
-        const max = 10 ** digits - 1;
-        const randomInt = Math.floor(rng.next() * (max - min + 1)) + min;
-        return `${prefix}-${randomInt}`;
-      }
-
-      function fillBatchTarget(targetId, prefix = "BATCH") {
-        const field = document.getElementById(targetId);
-        if (!field) return;
-        field.value = generateBatchCode(prefix);
-      }
-
-      function bindBatchGenerators() {
-        const simulationButton = document.getElementById("btnSimulasiBatch");
-        const simulationText = document.getElementById("textBatch");
-
-        if (simulationButton && simulationText) {
-          simulationButton.addEventListener("click", () => {
-            const batch = generateBatchCode("BATCH");
-            simulationText.textContent = batch;
-            console.log("Berhasil generate batch:", batch);
-          });
-        }
-
-        document.querySelectorAll("[data-batch-target]").forEach((button) => {
-          button.addEventListener("click", () => {
-            const targetId = button.dataset.batchTarget;
-            const prefix = button.dataset.batchPrefix || "BATCH";
-            fillBatchTarget(targetId, prefix);
-          });
-        });
-      }
-
+      // Contoh pemanggilan fungsi
       const seedBarang = 12345;
       console.log("Simulasi jumlah stok masuk:", simulasiStokMasuk(seedBarang));
 
+      // Inisialisasi Database: Pulihkan dari localStorage agar data tidak hilang saat refresh
       function initDB() {
         try {
           const raw = localStorage.getItem(KEY);
@@ -183,6 +150,7 @@ const KEY = "aquafresh_gudang_v1",
 
       let db = initDB();
 
+      // UI Status Sinkronisasi Cloudflare
       function updateSyncUI(status, message) {
         const el = $("syncStatusBadge");
         if (!el) return;
@@ -203,9 +171,11 @@ const KEY = "aquafresh_gudang_v1",
         }
       }
 
+      // Fungsi untuk mengambil data barang & toko dari server Cloudflare & merge dengan database lokal
       async function loadData() {
         updateSyncUI("syncing");
         try {
+          // 1. Ambil data items dari Cloudflare
           const response = await fetch(API_URL + "/items", {
             cache: "no-store",
           });
@@ -213,10 +183,12 @@ const KEY = "aquafresh_gudang_v1",
           const serverItems = await response.json();
 
           if (Array.isArray(serverItems)) {
+            // Saring item yang sudah dihapus pengguna secara lokal
             const activeServer = serverItems.filter(
               (si) => !(db.deletedServerIds || []).includes(si.id),
             );
 
+            // Merge server data ke array items
             const merged = [...db.items];
             activeServer.forEach((si) => {
               const existingIdx = merged.findIndex(
@@ -227,6 +199,7 @@ const KEY = "aquafresh_gudang_v1",
                       si.code.trim().toUpperCase()),
               );
               if (existingIdx !== -1) {
+                // Perbarui data master tanpa menghapus stok pcs / kardus yang sudah diproduksi secara lokal
                 const cur = merged[existingIdx];
                 merged[existingIdx] = {
                   ...cur,
@@ -247,6 +220,7 @@ const KEY = "aquafresh_gudang_v1",
                     cur.boxes !== undefined ? cur.boxes : Number(si.boxes) || 0,
                 };
               } else {
+                // Barang baru dari Cloudflare
                 merged.push({
                   id: si.id,
                   code: si.code,
@@ -266,6 +240,7 @@ const KEY = "aquafresh_gudang_v1",
             db.items = merged;
           }
 
+          // 2. Ambil data toko (customers) dari Cloudflare
           try {
             const custRes = await fetch(API_URL + "/customers", {
               cache: "no-store",
@@ -305,6 +280,7 @@ const KEY = "aquafresh_gudang_v1",
                   }
                 });
 
+                // Sinkronkan customer lokal yang belum ada di Cloudflare
                 for (const localCust of db.customers) {
                   const onServer = activeCusts.some(
                     (sc) =>
@@ -328,7 +304,7 @@ const KEY = "aquafresh_gudang_v1",
             console.warn("Gagal load customers dari Cloudflare:", e);
           }
 
-          save();
+          save(); // Simpan hasil sinkronisasi ke storage lokal
           updateSyncUI("success");
         } catch (err) {
           console.warn(
@@ -340,6 +316,7 @@ const KEY = "aquafresh_gudang_v1",
         refresh();
       }
 
+      // Sistem Autentikasi Pengguna
       function getCurrentUser() {
         try {
           const raw =
@@ -435,18 +412,15 @@ const KEY = "aquafresh_gudang_v1",
           ),
         item = (id) => db.items.find((x) => x.id === Number(id)),
         customer = (id) => db.customers.find((x) => x.id === Number(id));
-
       function toast(s) {
         $("toast").textContent = s;
         $("toast").style.display = "block";
         setTimeout(() => ($("toast").style.display = "none"), 2600);
       }
-
       function save() {
         localStorage.setItem(KEY, JSON.stringify(db));
         refresh();
       }
-
       function showPage(n, updateHistory = true) {
         if (!n) n = "dashboard";
         const targetPage = $("page-" + n);
@@ -516,7 +490,6 @@ const KEY = "aquafresh_gudang_v1",
         }
         preview();
       }
-
       function tx(i, type, date, change, note) {
         const record = {
           id: db.nextTx++,
@@ -535,11 +508,9 @@ const KEY = "aquafresh_gudang_v1",
           body: JSON.stringify(record),
         }).catch((e) => console.warn("Gagal kirim transaksi ke server:", e));
       }
-
       function pill(t) {
         return `<span class="pill">${esc(t)}</span>`;
       }
-
       function renderItems() {
         let q = ($("searchItems")?.value || "").toLowerCase(),
           a = db.items.filter((i) =>
@@ -554,7 +525,6 @@ const KEY = "aquafresh_gudang_v1",
             .join("") ||
           '<tr><td colspan="8" class="empty">Belum ada barang.</td></tr>';
       }
-
       function renderCustomers() {
         $("customersTable").innerHTML =
           db.customers
@@ -565,7 +535,6 @@ const KEY = "aquafresh_gudang_v1",
             .join("") ||
           '<tr><td colspan="5" class="empty">Belum ada toko.</td></tr>';
       }
-
       function renderTx() {
         let q = ($("txSearch")?.value || "").toLowerCase(),
           t = $("txType")?.value || "",
@@ -587,7 +556,6 @@ const KEY = "aquafresh_gudang_v1",
             .join("") ||
           '<tr><td colspan="6" class="empty">Belum ada transaksi.</td></tr>';
       }
-
       function renderStock() {
         let q = ($("stockSearch")?.value || "").toLowerCase();
         $("stockTable").innerHTML = db.items
@@ -598,7 +566,6 @@ const KEY = "aquafresh_gudang_v1",
           )
           .join("");
       }
-
       function dashboard() {
         $("sku").textContent = fmt(db.items.length);
         $("boxes").textContent = fmt(db.items.reduce((s, i) => s + i.boxes, 0));
@@ -628,7 +595,6 @@ const KEY = "aquafresh_gudang_v1",
             .join("") ||
           '<tr><td colspan="5" class="empty">Belum ada transaksi.</td></tr>';
       }
-
       function refresh() {
         selects();
         renderItems();
@@ -638,21 +604,17 @@ const KEY = "aquafresh_gudang_v1",
         renderUsers();
         dashboard();
       }
-
       function modal(title, html) {
         $("modalTitle").textContent = title;
         $("modalBody").innerHTML = html;
         $("modalbg").style.display = "flex";
       }
-
       function closeModal() {
         $("modalbg").style.display = "none";
       }
-
       $("modalbg").onclick = (e) => {
         if (e.target.id === "modalbg") closeModal();
       };
-
       function openItem(id) {
         let i = id ? item(id) : null;
         modal(
@@ -670,6 +632,7 @@ const KEY = "aquafresh_gudang_v1",
           </form>`,
         );
 
+        // Event listener saat tombol simpan di dalam modal diklik
         $("itemForm").onsubmit = async (e) => {
           e.preventDefault();
           let formData = new FormData(e.target);
@@ -710,6 +673,7 @@ const KEY = "aquafresh_gudang_v1",
             console.error("Gagal menyimpan item ke server:", err);
           }
 
+          // Fallback lokal jika offline
           if (i) {
             Object.assign(i, v);
             save();
@@ -746,6 +710,7 @@ const KEY = "aquafresh_gudang_v1",
         }
       }
 
+      // Manajemen Akun Pengguna
       function renderUsers() {
         if (!$("usersTable")) return;
         const q = ($("userSearch")?.value || "").toLowerCase();
@@ -891,7 +856,6 @@ const KEY = "aquafresh_gudang_v1",
           renderUsers();
         }
       }
-
       function openCustomer() {
         modal(
           "Tambah Toko",
@@ -948,6 +912,7 @@ const KEY = "aquafresh_gudang_v1",
             console.warn("Gagal simpan customer ke Cloudflare:", err);
           }
 
+          // Fallback lokal jika offline
           newCust.id = db.nextId++;
           db.customers.push(newCust);
           save();
@@ -973,7 +938,6 @@ const KEY = "aquafresh_gudang_v1",
           }
         }
       }
-
       function preview() {
         if (!$("packPreview")) return;
         let i = item($("packItem")?.value),
@@ -982,16 +946,13 @@ const KEY = "aquafresh_gudang_v1",
           ? `Stok ${fmt(i.pcs)} pcs • Kebutuhan ${fmt(q * i.perBox)} pcs untuk ${fmt(q)} kardus • Sisa ${fmt(i.pcs - q * i.perBox)} pcs`
           : "Pilih barang untuk melihat kebutuhan pcs.";
       }
-
       $("packItem").onchange = preview;
       $("packQty").oninput = preview;
-
       function dates() {
         ["prodDate", "packDate", "inDate", "outDate"].forEach(
           (id) => ($(id).value = today()),
         );
       }
-
       $("productionForm").onsubmit = (e) => {
         e.preventDefault();
         let i = item($("prodItem").value),
@@ -1012,7 +973,6 @@ const KEY = "aquafresh_gudang_v1",
         dates();
         toast("Penerimaan produksi dicatat");
       };
-
       $("packingForm").onsubmit = (e) => {
         e.preventDefault();
         let i = item($("packItem").value),
@@ -1039,7 +999,6 @@ const KEY = "aquafresh_gudang_v1",
         dates();
         toast("Packing berhasil disimpan");
       };
-
       $("inForm").onsubmit = (e) => {
         e.preventDefault();
         let i = item($("inItem").value),
@@ -1060,7 +1019,6 @@ const KEY = "aquafresh_gudang_v1",
         dates();
         toast("Barang masuk dicatat");
       };
-
       $("outForm").onsubmit = (e) => {
         e.preventDefault();
         let i = item($("outItem").value),
@@ -1084,7 +1042,6 @@ const KEY = "aquafresh_gudang_v1",
         dates();
         toast("Pengiriman berhasil dicatat");
       };
-
       function exportCSV(kind) {
         let rows;
         if (kind === "barang")
@@ -1145,13 +1102,11 @@ const KEY = "aquafresh_gudang_v1",
         URL.revokeObjectURL(url);
         toast("CSV siap dibuka di Excel");
       }
-
       $("exportNav").onclick = () =>
         modal(
           "Ekspor Laporan",
           `<p>CSV dapat dibuka dengan Microsoft Excel.</p><div class="quick"><button onclick="exportCSV('barang');closeModal()">📊 Ekspor Laporan Stok</button><button class="qgreen" onclick="exportCSV('transaksi');closeModal()">🧾 Ekspor Riwayat Transaksi</button></div>`,
         );
-
       $("backupNav").onclick = () => {
         let a = document.createElement("a"),
           url = URL.createObjectURL(
@@ -1165,7 +1120,6 @@ const KEY = "aquafresh_gudang_v1",
         URL.revokeObjectURL(url);
         toast("Backup diunduh");
       };
-
       $("date").textContent = new Date().toLocaleDateString("id-ID", {
         weekday: "long",
         day: "numeric",
@@ -1176,6 +1130,7 @@ const KEY = "aquafresh_gudang_v1",
       refresh();
       checkAuth();
       initNavigation();
-      bindBatchGenerators();
       loadData();
+      
+
 
